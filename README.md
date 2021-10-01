@@ -1,6 +1,6 @@
 # 3D Volumetric Estimation
 In this project we are going to estimate Volume of object using a stereo camera (OAK-D).
-For documentation about OAK-D, visit OAK-D repository at https://github.com/mhsily/
+For documentation about OAK-D, https://github.com/mhsily/OAKD-OpenCV-AI-Kit
 
 ## RGBD Image
 An RGBD Image is data structure made using a RGB image and a depth Image of same frame and both images have same resolution. 
