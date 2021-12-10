@@ -25,27 +25,25 @@ xoutSpatialData.setStreamName("spatialData")
 xinSpatialCalcConfig.setStreamName("spatialCalcConfig")
 
 # Properties
-monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
+monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
-monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
+monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
-lrcheck = True
+lrcheck = False
 subpixel = False
-extended_disparity = True
 
 stereo.initialConfig.setConfidenceThreshold(255)
-depth.setExtendedDisparity(extended_disparity)
 stereo.setLeftRightCheck(lrcheck)
 stereo.setSubpixel(subpixel)
 
 # Config
-topLeft = dai.Point2f(0, 0)
-bottomRight = dai.Point2f(0.01, 0.01)
+topLeft = dai.Point2f(0.49, 0.49)
+bottomRight = dai.Point2f(0.51, 0.51)
 
 config = dai.SpatialLocationCalculatorConfigData()
-config.depthThresholds.lowerThreshold = 150
-config.depthThresholds.upperThreshold = 200
+config.depthThresholds.lowerThreshold = 100
+config.depthThresholds.upperThreshold = 10000
 config.roi = dai.Rect(topLeft, bottomRight)
 
 spatialLocationCalculator.setWaitForConfigInput(False)
@@ -70,9 +68,12 @@ with dai.Device(pipeline) as device:
     spatialCalcConfigInQueue = device.getInputQueue("spatialCalcConfig")
 
     color = (255, 255, 255)
-    points = []
+
+    print("Use WASD keys to move ROI!")
+
     while True:
         inDepth = depthQueue.get() # Blocking call, will wait until a new data has arrived
+
         depthFrame = inDepth.getFrame()
         depthFrameColor = cv2.normalize(depthFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
         depthFrameColor = cv2.equalizeHist(depthFrameColor)
@@ -86,38 +87,46 @@ with dai.Device(pipeline) as device:
             ymin = int(roi.topLeft().y)
             xmax = int(roi.bottomRight().x)
             ymax = int(roi.bottomRight().y)
+
             depthMin = depthData.depthMin
             depthMax = depthData.depthMax
+
             fontType = cv2.FONT_HERSHEY_TRIPLEX
             cv2.rectangle(depthFrameColor, (xmin, ymin), (xmax, ymax), color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
-            if [depthData.spatialCoordinates.x, depthData.spatialCoordinates.y, depthData.spatialCoordinates.z] not in list:
-            	points.append([depthData.spatialCoordinates.x, depthData.spatialCoordinates.y, depthData.spatialCoordinates.z])
-            #cv2.putText(depthFrameColor, f"X: {int(depthData.spatialCoordinates.x)} mm", (xmin + 10, ymin + 20), fontType, 0.5, 255)
-            #cv2.putText(depthFrameColor, f"Y: {int(depthData.spatialCoordinates.y)} mm", (xmin + 10, ymin + 35), fontType, 0.5, 255)
-            #cv2.putText(depthFrameColor, f"Z: {int(depthData.spatialCoordinates.z)} mm", (xmin + 10, ymin + 50), fontType, 0.5, 255)
+            cv2.putText(depthFrameColor, f"X: {int(depthData.spatialCoordinates.x)} mm", (xmin + 10, ymin + 20), fontType, 0.5, 255)
+            cv2.putText(depthFrameColor, f"Y: {int(depthData.spatialCoordinates.y)} mm", (xmin + 10, ymin + 35), fontType, 0.5, 255)
+            cv2.putText(depthFrameColor, f"Z: {int(depthData.spatialCoordinates.z)} mm", (xmin + 10, ymin + 50), fontType, 0.5, 255)
         # Show the frame
         cv2.imshow("depth", depthFrameColor)
 
-        if bottomRight.x << 1 or bottomRight.y << 1:
-        	if bottomRight.x << 1:
-	        	topLeft.x += stepSize
-   			    bottomRight.x += stepSize
-   			else:
-   				topLeft.x = 0
-   			    bottomRight.x = 0.01
-   			    topLeft.y += stepSize
-                bottomRight.y += stepSize
-        else:
-        	print("Captured All Points")
-        	np.save('points.npy',)
-
-        config.roi = dai.Rect(topLeft, bottomRight)
-        config.calculationAlgorithm = dai.SpatialLocationCalculatorAlgorithm.AVERAGE
-        cfg = dai.SpatialLocationCalculatorConfig()
-        cfg.addROI(config)
-        spatialCalcConfigInQueue.send(cfg)
-        
         key = cv2.waitKey(1)
         if key == ord('q'):
             break
-        
+        elif key == ord('w'):
+            if topLeft.y - stepSize >= 0:
+                topLeft.y -= stepSize
+                bottomRight.y -= stepSize
+                newConfig = True
+        elif key == ord('a'):
+            if topLeft.x - stepSize >= 0:
+                topLeft.x -= stepSize
+                bottomRight.x -= stepSize
+                newConfig = True
+        elif key == ord('s'):
+            if bottomRight.y + stepSize <= 1:
+                topLeft.y += stepSize
+                bottomRight.y += stepSize
+                newConfig = True
+        elif key == ord('d'):
+            if bottomRight.x + stepSize <= 1:
+                topLeft.x += stepSize
+                bottomRight.x += stepSize
+                newConfig = True
+
+        if newConfig:
+            config.roi = dai.Rect(topLeft, bottomRight)
+            config.calculationAlgorithm = dai.SpatialLocationCalculatorAlgorithm.AVERAGE
+            cfg = dai.SpatialLocationCalculatorConfig()
+            cfg.addROI(config)
+            spatialCalcConfigInQueue.send(cfg)
+            newConfig = False
