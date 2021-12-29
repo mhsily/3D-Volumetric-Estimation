@@ -1,0 +1,19 @@
+ 3D Coordinates Processing
+
+ Actual Dimensions of BOX (in CM):
+ 21 21 6
+
+ Estimated Dimensions of BOX (in CM): 
+ 19.986663818359375 6.377805137634278 19.479998779296874
+
+ Actual Volume of BOX (in CM Cube):
+ 2646
+
+ Estimated Volume of BOX (in CM Cube):
+ 2378.0603778780483
+
+ Accurary =  89.87378601201996 
+
+Format = auto
+Extension = ply
+
